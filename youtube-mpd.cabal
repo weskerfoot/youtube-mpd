@@ -1,0 +1,11 @@
+Name: youtube-mpd
+Version: 0.1
+Cabal-Version: >= 1.2
+License: GPL-3
+Author: Wesley Kerfoot
+Synopsis: play youtube music easier
+Build-Type: Simple
+
+Executable youtube-mpd
+  Build-Depends:  base, handa-gdata, process, directory, http-conduit, bytestring, aeson, containers, text
+  Main-Is:        Main.hs
