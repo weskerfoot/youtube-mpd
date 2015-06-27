@@ -6,11 +6,12 @@ import System.Directory (doesFileExist)
 import Network.Google.OAuth2 (formUrl, exchangeCode, refreshTokens,
                                OAuth2Client(..), OAuth2Tokens(..))
 import Network.Google (makeRequest, doRequest)
-import Network.HTTP.Conduit (simpleHttp)
+import Network.HTTP.Conduit (simpleHttp, HttpException)
 import Data.Aeson
 import qualified Data.ByteString.Lazy.Char8 as BL
 import qualified Data.Text as T
 import qualified Data.Map as M
+import Control.Exception
 
 data URL = URL { jurl :: T.Text }
   deriving (Show, Eq)
@@ -108,15 +109,22 @@ main = do
       authcode <- getLine
       tokens <- exchangeCode client authcode
       putStrLn $ "Received access token: " ++ show (accessToken tokens)
-      tokens2 <- refreshTokens client tokens
-      putStrLn $ "As a test, refreshed token: " ++ show (accessToken tokens2)
-      writeFile file (show tokens2)
+      writeFile file (show tokens)
   accessTok <- fmap (accessToken . read) (readFile file)
-  findTracks accessTok "Foo+Fighters"
+  tracks <- findTracks client accessTok "Foo+Fighters"
+  print tracks
 
-findTracks accessTok term = do
-  response <- simpleHttp $ searchRequest term accessTok
-  return $ getItems response
+getNewTokens :: OAuth2Client -> IO ()
+getNewTokens client = do
+  tokens <- read <$> readFile file
+  newTokens <- refreshTokens client tokens
+  writeFile file (show newTokens)
+
+findTracks client accessTok term = do
+  response <- (try $ simpleHttp $ searchRequest term accessTok) :: IO (Either HttpException BL.ByteString)
+  case response of
+    (Left _) -> getNewTokens client >> findTracks client accessTok term
+    (Right resp) -> return $ getItems resp
 
 search :: String -> [T.Text]
 search term = undefined
