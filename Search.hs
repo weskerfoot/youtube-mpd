@@ -1,3 +1,5 @@
+module Search where
+
 import Control.Monad (unless)
 import System.Info (os)
 import System.Process (system, rawSystem)
@@ -7,68 +9,12 @@ import Network.Google.OAuth2 (formUrl, exchangeCode, refreshTokens,
                                OAuth2Client(..), OAuth2Tokens(..))
 import Network.Google (makeRequest, doRequest)
 import Network.HTTP.Conduit (simpleHttp, HttpException)
-import Data.Aeson
+import Data.Aeson (decode)
 import qualified Data.ByteString.Lazy.Char8 as BL
 import qualified Data.Text as T
-import qualified Data.Map as M
 import Control.Exception
-
-data URL = URL { jurl :: T.Text }
-  deriving (Show, Eq)
-
-data VideoID = VideoID { videoID :: T.Text }
-  deriving (Show, Eq)
-
-data Thumbnail = Thumbnail { thumbnail :: URL }
-  deriving (Show, Eq)
-
-data JSearchResult = JSearchResult {
-  jvideoID :: VideoID,
-  snippet :: Snippet
-}
-  deriving (Show, Eq)
-
-data Snippet = Snippet {
-  jtitle :: T.Text,
-  jdescription :: T.Text,
-  jthumbnails :: Thumbnail
-}
-  deriving (Show, Eq)
-
-data JItems = JItems [JSearchResult]
-  deriving (Show)
-
-data SearchResult = SearchResult {
-  title :: T.Text,
-  description :: T.Text,
-  url :: T.Text,
-  thumb :: T.Text
-}
-  deriving (Show, Eq)
-
-instance FromJSON URL where
-  parseJSON (Object v) = URL <$> v .: "url"
-
-instance FromJSON Thumbnail where
-  parseJSON (Object v) = Thumbnail <$> v .: "default"
-
-instance FromJSON VideoID where
-  parseJSON (Object v) = VideoID <$>
-                          v .: "videoId"
-
-instance FromJSON Snippet where
-  parseJSON (Object v) = Snippet <$>
-                         v .: "title" <*>
-                         v .: "description" <*>
-                         v .: "thumbnails"
-
-instance FromJSON JSearchResult where
-  parseJSON (Object v) = JSearchResult <$>
-                         (v .: "id") <*>
-                         (v .: "snippet")
-
-instance FromJSON JItems where
-  parseJSON (Object v) = JItems <$> v .: "items"
+import Network.HTTP.Base (urlEncode)
+import Types
 
 makeURL :: T.Text -> T.Text
 makeURL vid = "https://youtube.com/watch?v=" `T.append` vid
@@ -97,9 +43,8 @@ searchRequest keyword accessTok =
   "&type=video&access_token=" ++
   accessTok
 
-
-
-main = do
+search :: String -> IO [SearchResult]
+search term = do
   let client = OAuth2Client { clientId = cid, clientSecret = secret }
       permissionUrl = formUrl client ["https://www.googleapis.com/auth/youtube"]
   b <- doesFileExist file
@@ -111,8 +56,7 @@ main = do
       putStrLn $ "Received access token: " ++ show (accessToken tokens)
       writeFile file (show tokens)
   accessTok <- fmap (accessToken . read) (readFile file)
-  tracks <- findTracks client accessTok "Foo+Fighters"
-  print tracks
+  findTracks client accessTok (urlEncode term)
 
 getNewTokens :: OAuth2Client -> IO ()
 getNewTokens client = do
@@ -125,6 +69,3 @@ findTracks client accessTok term = do
   case response of
     (Left _) -> getNewTokens client >> findTracks client accessTok term
     (Right resp) -> return $ getItems resp
-
-search :: String -> [T.Text]
-search term = undefined
