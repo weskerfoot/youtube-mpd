@@ -13,7 +13,7 @@ import Data.Aeson (decode)
 import qualified Data.ByteString.Lazy.Char8 as BL
 import qualified Data.Text as T
 import Control.Exception
-import Network.HTTP.Base (urlEncode)
+import Network.HTTP.Base (urlEncode, urlDecode)
 import Types
 
 makeURL :: T.Text -> T.Text
@@ -32,7 +32,7 @@ getItems str =
 
 cid = "571126085022-7ash7a48cdao0tesqe66ghtime34cfvo.apps.googleusercontent.com"
 secret = "FjgeOtSZoJgU87FbuwJf2vwj"
-file   = "./tokens.txt"
+file   = "/home/wes/.config/youtube-tokens.txt"
 baseURI = "https://www.googleapis.com/youtube/v3/"
 
 searchRequest :: String -> String -> String
@@ -42,6 +42,22 @@ searchRequest keyword accessTok =
   keyword ++
   "&type=video&access_token=" ++
   accessTok
+
+getNewTokens :: OAuth2Client -> IO OAuth2Tokens
+getNewTokens client = do
+  tokens <- read <$> readFile file
+  newTokens <- refreshTokens client tokens
+  writeFile file (show newTokens)
+  return newTokens
+
+findTracks :: OAuth2Client -> String -> String -> IO [SearchResult]
+findTracks client accessTok term = do
+  response <- (try $ simpleHttp $ searchRequest term accessTok) :: IO (Either HttpException BL.ByteString)
+  case response of
+    (Left _) -> do
+      tokens <- getNewTokens client
+      findTracks client (accessToken tokens) term
+    (Right resp) -> return $ getItems resp
 
 search :: String -> IO [SearchResult]
 search term = do
@@ -57,15 +73,3 @@ search term = do
       writeFile file (show tokens)
   accessTok <- fmap (accessToken . read) (readFile file)
   findTracks client accessTok (urlEncode term)
-
-getNewTokens :: OAuth2Client -> IO ()
-getNewTokens client = do
-  tokens <- read <$> readFile file
-  newTokens <- refreshTokens client tokens
-  writeFile file (show newTokens)
-
-findTracks client accessTok term = do
-  response <- (try $ simpleHttp $ searchRequest term accessTok) :: IO (Either HttpException BL.ByteString)
-  case response of
-    (Left _) -> getNewTokens client >> findTracks client accessTok term
-    (Right resp) -> return $ getItems resp

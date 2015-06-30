@@ -61,5 +61,3 @@ instance FromJSON JSearchResult where
 
 instance FromJSON JItems where
   parseJSON (Object v) = JItems <$> v .: "items"
-
-
