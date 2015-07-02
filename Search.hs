@@ -1,6 +1,7 @@
 module Search where
 
-import Control.Monad (unless)
+import Data.Function
+import Control.Monad (liftM2, unless, join, (>=>), (<=<))
 import System.Info (os)
 import System.Process (system, rawSystem)
 import System.Exit    (ExitCode(..))
@@ -43,20 +44,16 @@ searchRequest keyword accessTok =
   "&type=video&access_token=" ++
   accessTok
 
-getNewTokens :: OAuth2Client -> IO OAuth2Tokens
+getNewTokens :: OAuth2Client -> IO ()
 getNewTokens client = do
   tokens <- read <$> readFile file
   newTokens <- refreshTokens client tokens
   writeFile file (show newTokens)
-  return newTokens
 
-findTracks :: OAuth2Client -> String -> String -> IO [SearchResult]
 findTracks client accessTok term = do
   response <- (try $ simpleHttp $ searchRequest term accessTok) :: IO (Either HttpException BL.ByteString)
   case response of
-    (Left _) -> do
-      tokens <- getNewTokens client
-      findTracks client (accessToken tokens) term
+    (Left _) -> getNewTokens client >> search (urlDecode term)
     (Right resp) -> return $ getItems resp
 
 search :: String -> IO [SearchResult]
@@ -72,4 +69,16 @@ search term = do
       putStrLn $ "Received access token: " ++ show (accessToken tokens)
       writeFile file (show tokens)
   accessTok <- fmap (accessToken . read) (readFile file)
-  findTracks client accessTok (urlEncode term)
+  findTracks client accessTok $ urlEncode term
+
+firstResult = url . head $. search
+allResults = map url $. search
+withDescriptions = map ((T.drop 3) . liftM2 (T.append `on` (T.append " : ")) url description) $. search
+withTitles = map ((T.drop 3) . liftM2 (T.append `on` (T.append " : ")) url title) $. search
+withDescriptionsStr = T.intercalate "\n" $. withDescriptions
+withTitlesStr = T.intercalate "\n" $. withTitles
+
+infixr 8 $.
+a $. b = \x -> do
+  y <- b x
+  return $ a y
