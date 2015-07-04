@@ -71,8 +71,7 @@ search term = do
   accessTok <- fmap (accessToken . read) (readFile file)
   findTracks client accessTok $ urlEncode term
 
-firstResult = url . head $. search
-allResults = map url $. search
+firstResult = head $. search
 withDescriptions = map ((T.drop 3) . liftM2 (T.append `on` (T.append " : ")) url description) $. search
 withTitles = map ((T.drop 3) . liftM2 (T.append `on` (T.append " : ")) url title) $. search
 withDescriptionsStr = T.intercalate "\n" $. withDescriptions

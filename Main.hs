@@ -1,6 +1,7 @@
 module Main where
 
 import Search
+import Network.MPD.Applicative.CurrentPlaylist
 import Types
 import Database
 import Data.List
