@@ -40,24 +40,30 @@ data SearchResult = SearchResult {
 
 instance FromJSON URL where
   parseJSON (Object v) = URL <$> v .: "url"
+  parseJSON _ = error "invalid parse"
 
 instance FromJSON Thumbnail where
   parseJSON (Object v) = Thumbnail <$> v .: "default"
+  parseJSON _ = error "invalid parse"
 
 instance FromJSON VideoID where
   parseJSON (Object v) = VideoID <$>
                           v .: "videoId"
+  parseJSON _ = error "invalid parse"
 
 instance FromJSON Snippet where
   parseJSON (Object v) = Snippet <$>
                          v .: "title" <*>
                          v .: "description" <*>
                          v .: "thumbnails"
+  parseJSON _ = error "invalid parse"
 
 instance FromJSON JSearchResult where
   parseJSON (Object v) = JSearchResult <$>
                          (v .: "id") <*>
                          (v .: "snippet")
+  parseJSON _ = error "invalid parse"
 
 instance FromJSON JItems where
   parseJSON (Object v) = JItems <$> v .: "items"
+  parseJSON _ = error "invalid parse"

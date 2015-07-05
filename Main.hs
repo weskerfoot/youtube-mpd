@@ -10,5 +10,5 @@ import qualified Data.Text.IO as TIO (putStrLn)
 
 main = do
   term <- getArgs
-  result <- firstResult $ intercalate " " term
-  addSingle result
+  result <- search $ intercalate " " term
+  mapM_ addSingle result

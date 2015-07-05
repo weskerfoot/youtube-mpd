@@ -2,6 +2,8 @@
 module Database where
 
 import qualified Network.MPD as MP
+import Network.MPD.Applicative.Status
+import Network.MPD.Core
 import Types
 import Search
 import qualified Unsafe.Coerce as C
@@ -13,6 +15,7 @@ import qualified Data.ByteString as B
 import Data.String.Utils
 import Data.Maybe
 import Control.Applicative
+import Utils
 
 {-
  - unsafeCoerce is needed because the "Path"
@@ -28,22 +31,44 @@ toPath = C.unsafeCoerce . BC.pack . strip . head . split "\n"
 toValue :: B.ByteString -> MP.Value
 toValue = C.unsafeCoerce
 
-changeTitle :: TIO.Text -> Maybe MP.Song -> IO (MP.Response ())
-changeTitle _ Nothing = error "empty playlist"
+fromId :: MP.Id -> Int
+fromId = C.unsafeCoerce
 
-changeTitle title' (Just song) = do
-  let title = encodeUtf8 title'
+changeTag :: MP.Metadata -> TIO.Text -> Maybe MP.Song -> IO (MP.Response [B.ByteString])
+changeTag _ _ Nothing = error "empty playlist"
+
+changeTag tag tagval' (Just song) = do
+  let tagval = encodeUtf8 tagval'
   case (MP.sgId song) of
     Nothing -> error "tried to modify a non-existent track"
-    (Just sid) -> do
-      MP.withMPD $
-        MP.addTagId sid MP.Title (toValue title)
+    (Just sid) -> addTagId sid tag (BC.unpack tagval)
 
-addSingle :: SearchResult -> IO (MP.Response ())
+changeArtist = changeTag MP.Artist
+changeTitle = changeTag MP.Title
+
+changeBoth track (artist, title) =
+  changeArtist artist track >>
+  changeTitle title track
+
+addTagId :: MP.Id -> MP.Metadata -> String -> IO (Response [B.ByteString])
+addTagId sid tag tagVal = MP.withMPD $
+                              getResponse $
+                                "addtagid " ++
+                                (show $ fromId sid) ++
+                                " " ++
+                                (show tag) ++
+                                " \"" ++
+                                tagVal ++
+                                " \""
+
+addSingle :: SearchResult -> IO (Response [B.ByteString])
 addSingle track = do
   let trackUrl = url track
-  let trackTitle = title track
+  let trackDesc = title track
   fullUrl <- readProcess "youtube-dl" ["-g", "-f", "bestaudio", (TIO.unpack trackUrl)] ""
   MP.withMPD $ MP.add $ toPath fullUrl
   (Right pl) <- (MP.withMPD $ MP.playlistInfo Nothing)
-  changeTitle trackTitle (listToMaybe $ reverse pl)
+  let lastTrack = listToMaybe $ reverse pl
+  either (const $ changeTitle trackDesc lastTrack)
+         (changeBoth lastTrack)
+         (parseTrack trackDesc)
