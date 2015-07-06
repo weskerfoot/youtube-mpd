@@ -17,6 +17,8 @@ import Control.Exception
 import Network.HTTP.Base (urlEncode, urlDecode)
 import Types
 
+maxResults = 10
+
 makeURL :: T.Text -> T.Text
 makeURL vid = "https://youtube.com/watch?v=" `T.append` vid
 
@@ -39,7 +41,9 @@ baseURI = "https://www.googleapis.com/youtube/v3/"
 searchRequest :: String -> String -> String
 searchRequest keyword accessTok =
   baseURI ++
-  "search?part=snippet&q=" ++
+  "search?maxResults=" ++
+  (show maxResults) ++
+  "&part=snippet&q=" ++
   keyword ++
   "&type=video&access_token=" ++
   accessTok

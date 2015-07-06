@@ -7,5 +7,7 @@ Synopsis: play youtube music easier
 Build-Type: Simple
 
 Executable youtube-mpd
-  Build-Depends:  base, handa-gdata, process, directory, http-conduit, bytestring, aeson, containers, text
+  Build-Depends:  base, HTTP, handa-gdata, process, directory, http-conduit, bytestring, aeson, containers, text, libmpd, MissingH, mtl, attoparsec
   Main-Is:        Main.hs
+  Extensions: OverloadedStrings
+  GHC-Options:  -fwarn-incomplete-patterns  -Werror

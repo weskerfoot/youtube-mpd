@@ -34,21 +34,19 @@ toValue = C.unsafeCoerce
 fromId :: MP.Id -> Int
 fromId = C.unsafeCoerce
 
-changeTag :: MP.Metadata -> TIO.Text -> Maybe MP.Song -> IO (MP.Response [B.ByteString])
-changeTag _ _ Nothing = error "empty playlist"
+--changeTag :: MP.Metadata -> TIO.Text -> Either MP.Id -> IO (MP.Response [B.ByteString])
 
-changeTag tag tagval' (Just song) = do
+changeTag tag tagval' (Right sid) = do
   let tagval = encodeUtf8 tagval'
-  case (MP.sgId song) of
-    Nothing -> error "tried to modify a non-existent track"
-    (Just sid) -> addTagId sid tag (BC.unpack tagval)
+    in addTagId sid tag (BC.unpack tagval)
+changeTag _ _ (Left _) = error "error changing tag"
 
 changeArtist = changeTag MP.Artist
 changeTitle = changeTag MP.Title
 
-changeBoth track (artist, title) =
-  changeArtist artist track >>
-  changeTitle title track
+changeBoth trackid (artist, title) =
+  changeArtist artist trackid >>
+  changeTitle title trackid
 
 addTagId :: MP.Id -> MP.Metadata -> String -> IO (Response [B.ByteString])
 addTagId sid tag tagVal = MP.withMPD $
@@ -66,9 +64,7 @@ addSingle track = do
   let trackUrl = url track
   let trackDesc = title track
   fullUrl <- readProcess "youtube-dl" ["-g", "-f", "bestaudio", (TIO.unpack trackUrl)] ""
-  MP.withMPD $ MP.add $ toPath fullUrl
-  (Right pl) <- (MP.withMPD $ MP.playlistInfo Nothing)
-  let lastTrack = listToMaybe $ reverse pl
-  either (const $ changeTitle trackDesc lastTrack)
-         (changeBoth lastTrack)
+  newId <- MP.withMPD $ MP.addId (toPath fullUrl) Nothing
+  either (const $ changeTitle trackDesc newId)
+         (changeBoth newId)
          (parseTrack trackDesc)
