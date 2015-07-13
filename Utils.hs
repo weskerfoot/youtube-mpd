@@ -16,7 +16,6 @@ isSep = choice [string "by",
                 repeated "-",
                 repeated "|"]
 
-
 isTrack = do
   artist <- manyTill anyChar isSep
   title <- many1 anyChar
