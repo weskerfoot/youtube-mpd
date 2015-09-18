@@ -4,6 +4,7 @@ import Data.Aeson
 import qualified Data.ByteString.Lazy.Char8 as BL
 import qualified Data.Text as T
 import qualified Data.Map as M
+import qualified Data.String as S
 
 data URL = URL { jurl :: T.Text }
   deriving (Show, Eq)
@@ -37,6 +38,12 @@ data SearchResult = SearchResult {
   thumb :: T.Text
 }
   deriving (Show, Eq)
+
+data M3U = M3U T.Text
+  deriving (Show)
+
+instance S.IsString M3U where
+  fromString = M3U . T.pack
 
 instance FromJSON URL where
   parseJSON (Object v) = URL <$> v .: "url"

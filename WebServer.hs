@@ -1,4 +1,4 @@
-module Main where
+module WebServer where
 
 import Search
 import Network.MPD.Applicative.CurrentPlaylist
@@ -10,8 +10,7 @@ import qualified Data.Text.IO as TIO (putStrLn, putStr)
 import qualified Control.Monad as M
 import M3U
 
-main = do
-  args <- getArgs
+getPlaylist args = do
   let mode = head args
   let searchTerm = intercalate " " $ tail args
   case mode of
@@ -19,5 +18,5 @@ main = do
     "all" -> do
               m3ulist <- (M.join (genm3u <$> search searchTerm))
               let (M3U filecontents) = m3ulist
-              TIO.putStr filecontents
+              return filecontents
     _ -> error "unknown mode"

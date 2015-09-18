@@ -7,15 +7,14 @@ import Network.MPD.Core
 import Types
 import Search
 import qualified Unsafe.Coerce as C
-import qualified Data.Text as TIO
 import Data.Text.Encoding
-import System.Process
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.ByteString as B
 import Data.String.Utils
 import Data.Maybe
 import Control.Applicative
 import Utils
+import Playlists
 
 {-
  - unsafeCoerce is needed because the "Path"
@@ -63,8 +62,9 @@ addSingle :: SearchResult -> IO (Response [B.ByteString])
 addSingle track = do
   let trackUrl = url track
   let trackDesc = title track
-  fullUrl <- readProcess "youtube-dl" ["-g", "-f", "bestaudio", (TIO.unpack trackUrl)] ""
+  fullUrl <- getUrl trackUrl
   newId <- MP.withMPD $ MP.addId (toPath fullUrl) Nothing
+  --downUrl trackUrl
   either (const $ changeTitle trackDesc newId)
          (changeBoth newId)
          (parseTrack trackDesc)
