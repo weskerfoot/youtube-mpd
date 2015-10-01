@@ -62,7 +62,7 @@ addSingle :: SearchResult -> IO (Response [B.ByteString])
 addSingle track = do
   let trackUrl = url track
   let trackDesc = title track
-  fullUrl <- getUrl trackUrl
+  (Just fullUrl) <- getUrl trackUrl
   newId <- MP.withMPD $ MP.addId (toPath fullUrl) Nothing
   --downUrl trackUrl
   either (const $ changeTitle trackDesc newId)

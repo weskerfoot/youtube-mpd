@@ -6,7 +6,7 @@ import Types
 import Database
 import Data.List
 import System.Environment (getArgs)
-import qualified Data.Text.IO as TIO (putStrLn, putStr)
+import qualified Data.Text.IO as TIO (putStrLn, putStr, writeFile)
 import qualified Control.Monad as M
 import M3U
 

@@ -17,7 +17,7 @@ import Control.Exception
 import Network.HTTP.Base (urlEncode, urlDecode)
 import Types
 
-maxResults = 10
+maxResults = 50
 
 makeURL :: T.Text -> T.Text
 makeURL vid = "https://youtube.com/watch?v=" `T.append` vid
